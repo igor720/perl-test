@@ -82,6 +82,8 @@ sub parse {
     return $count;
 }
 
+# Как я понял нужны те записи из таблицы 'message' для которых есть
+# соответствующие записи в таблице 'log' с заданным адресом
 my $SQL_RECORDS = <<'SQL_RECORDS';
     SELECT c, s FROM
     (((SELECT DISTINCT m.int_id as ii, m.created as c, m.str as s
