@@ -1,32 +1,36 @@
 #!/usr/bin/env perl
-use Mojolicious::Lite -signatures;
-
 BEGIN {
     push (@INC, ".");
 }
+
+use Mojolicious::Lite -signatures;
+use PerlTest::LogParser 0.001 qw(address_records);
+
+my $dbh = DBI->connect(
+    'dbi:Pg:dbname=test', '', '', {RaiseError => 1, AutoCommit => 0}
+    );
 
 
 get '/' => sub ($c) {
     $c->render(template => 'index');
 };
 
-# /foo1?user=sri
+# /foo1?addr=sri
 get '/foo1' => sub ($c) {
     my $user = $c->param('user');
-    my @rows = (1,2,3,4,5);
+    # my @rows = (1,2,3,4,5);
 
-    $c->app->log->debug("Request from ******************");
+    my $addr = 'ldtyzggfqejxo@mail.ru';
 
-    $c->render(template => 'listing', rows => \@rows);
+    my $rows = address_records ($dbh, $addr);
 
-#     say $c->render(<<'EOF', { rows => \@rows } );
-# % for (@$rows) {
-# <%= "Row $_\n" =%>
-# % }
-# EOF
+    $c->app->log->debug(@{$rows});
+
+    $c->render(template => 'listing', rows => $rows);
 
     # $c->render(text => "Hello $user.");
 };
+    # <td>Cell <%= $n %></td><td><%= $n %></td>
 
 
 app->start;
@@ -36,10 +40,14 @@ __DATA__
 % layout 'default';
 % title 'DB Listing';
 <table>
-   <tr><th>Heading 1</th><th>Heading 2</th></tr>
-   % for my $n (@$rows) {
-   <tr><td>Cell <%= $n %></td><td><%= $n %></td></tr>
-   % }
+    <tr><th>Log</th></tr>
+    % for my $r (@$rows) {
+    <tr>
+        % for my $f (@$r) {
+        <td><%= $f %></td>
+        % }
+    </tr>
+    % }
 </table>
 
 @@ index.html.ep

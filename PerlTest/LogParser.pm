@@ -8,7 +8,7 @@ use DBD::Pg qw(:pg_types);
 use strict;
 use warnings;
 
-our @EXPORT = qw(parse);
+our @EXPORT = qw(parse address_records);
 
 # Чтобы убыстрить вставку можно еще использовать bulk insert
 my $SQL_MES = <<'SQL_MES';
@@ -31,14 +31,14 @@ sub parse {
     my $sth_mes = $dbh->prepare($SQL_MES);
     my $sth_log = $dbh->prepare($SQL_LOG);
 
-    ## следующие строки только для отладки
-    # my $sth_mes_trunc = $dbh->prepare("TRUNCATE message");
-    # my $sth_log_trunc = $dbh->prepare("TRUNCATE log");
-    # $sth_mes_trunc->execute() or die $DBI::errstr;
-    # $sth_log_trunc->execute() or die $DBI::errstr;
-    # $dbh->commit();
+    # следующие строки только для отладки
+    my $sth_mes_trunc = $dbh->prepare("TRUNCATE message");
+    my $sth_log_trunc = $dbh->prepare("TRUNCATE log");
+    $sth_mes_trunc->execute() or die $DBI::errstr;
+    $sth_log_trunc->execute() or die $DBI::errstr;
+    $dbh->commit();
 
-    ## имя файла лога берем из командной строки
+    # имя файла лога берем из командной строки
     while (<>) {
         # s/^\w+//;  # эта строка вроде не нужна для такого лога
         s/\s+$//;
@@ -62,11 +62,14 @@ sub parse {
             }
         }
         else {
-            die "field 'address' is not found in $rest\n"
-                unless ($rest =~ /^(\S+)/);
-            $sth_log->execute(
-                $datetime, $int_id, "$int_id $flag $rest", $1
-                ) or die $DBI::errstr;
+            unless ($rest =~ /^(\S+)/) {
+                warn "field 'address' is not found in $rest\n";
+            }
+            else {
+                $sth_log->execute(
+                    $datetime, $int_id, "$int_id $flag $rest", $1
+                    ) or die $DBI::errstr;
+            }
         }
         $count++;
         $dbh->commit() if ($count % ($insertion_speed>0?$insertion_speed:1))==0;
@@ -74,6 +77,26 @@ sub parse {
     $dbh->commit();
     return $count;
 }
+
+my $SQL_RECORDS = <<'SQL_RECORDS';
+    SELECT created, str FROM log WHERE address=$1
+SQL_RECORDS
+
+
+sub address_records {
+    my $dbh = shift;
+    my $addr = shift;
+
+    # my $sth_records = $dbh->prepare($SQL_RECORDS, {pg_placeholder_dollaronly => 1});
+    # my $ary_ref = $sth_records->execute($addr);
+
+    my @binds = ($addr);
+    my $ary_ref = $dbh->selectall_arrayref($SQL_RECORDS, {}, @binds);
+
+    # $sth->execute('segname');
+    return $ary_ref
+}
+
 
 # sub get_dbh {
 #     # my @driver_names = DBI->available_drivers;
