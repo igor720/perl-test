@@ -6,32 +6,26 @@ BEGIN {
 use Mojolicious::Lite -signatures;
 use PerlTest::LogParser 0.001 qw(address_records);
 
+# Здесь мы могли бы предусмотреть файл конфигурации, но в данном простом случае
+# обойдемся без него
+use constant LIMIT => 100;
+use constant DBNAME => 'test';
+
 my $dbh = DBI->connect(
-    'dbi:Pg:dbname=test', '', '', {RaiseError => 1, AutoCommit => 0}
+    'dbi:Pg:dbname='.DBNAME, '', '', {RaiseError => 1, AutoCommit => 1}
     );
 
-
 get '/' => sub ($c) {
-    $c->render(template => 'index');
-};
-
-# /foo1?addr=sri
-get '/foo1' => sub ($c) {
-    my $user = $c->param('user');
-    # my @rows = (1,2,3,4,5);
-
-    my $addr = 'ldtyzggfqejxo@mail.ru';
-
+    my $addr = $c->param('addr');
     my $rows = address_records ($dbh, $addr);
-
+    my $limitexceded = @{$rows}>LIMIT ? 1 : 0;
     $c->app->log->debug(@{$rows});
-
-    $c->render(template => 'listing', rows => $rows);
-
-    # $c->render(text => "Hello $user.");
+    $c->render(
+        template => 'listing',
+        rows => $rows,
+        addr => $addr,
+        limitexceded => $limitexceded);
 };
-    # <td>Cell <%= $n %></td><td><%= $n %></td>
-
 
 app->start;
 __DATA__
@@ -39,6 +33,17 @@ __DATA__
 @@ listing.html.ep
 % layout 'default';
 % title 'DB Listing';
+<div><form action="/">
+  <label for="addr">Адрес:</label>
+  <input type="text" id="addr" name="addr" value="<%= $addr %>">
+  <input type="submit" value="Submit">
+</form></div>
+<br>
+% if ($addr) {
+    % if ($limitexceded) {
+<div><span style="color:red">Лимит превышен!</span></div>
+    % }
+<br>
 <table>
     <tr><th>Log</th></tr>
     % for my $r (@$rows) {
@@ -49,12 +54,7 @@ __DATA__
     </tr>
     % }
 </table>
-
-@@ index.html.ep
-% layout 'default';
-% title 'Welcome';
-<h1>Welcome to the Mojolicious real-time web framework!</h1>
-
+% }
 
 @@ layouts/default.html.ep
 <!DOCTYPE html>

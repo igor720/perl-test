@@ -38,6 +38,10 @@ sub parse {
     $sth_log_trunc->execute() or die $DBI::errstr;
     $dbh->commit();
 
+    # если есть вероятность, что транзакции обломятся, то надо исправить скрипт
+    # и удалить имеющиеся записи после первоначальной в файле лога.
+    # но в этой программе такая функциональность не предусмотрена.
+
     # имя файла лога берем из командной строки
     while (<>) {
         # s/^\w+//;  # эта строка вроде не нужна для такого лога
@@ -79,46 +83,21 @@ sub parse {
 }
 
 my $SQL_RECORDS = <<'SQL_RECORDS';
-    SELECT created, str FROM log WHERE address=$1
+    SELECT c, s FROM
+    (((SELECT DISTINCT m.int_id as ii, m.created as c, m.str as s
+        FROM message AS m INNER JOIN log AS l ON m.int_id=l.int_id
+        WHERE l.address=$1)
+    UNION
+    (SELECT int_id as ii, created as c, str as s
+        FROM log WHERE address=$1)
+    ) ORDER BY ii, c LIMIT 101) AS foo;
 SQL_RECORDS
-
 
 sub address_records {
     my $dbh = shift;
     my $addr = shift;
-
-    # my $sth_records = $dbh->prepare($SQL_RECORDS, {pg_placeholder_dollaronly => 1});
-    # my $ary_ref = $sth_records->execute($addr);
-
-    my @binds = ($addr);
-    my $ary_ref = $dbh->selectall_arrayref($SQL_RECORDS, {}, @binds);
-
-    # $sth->execute('segname');
-    return $ary_ref
+    return $dbh->selectall_arrayref($SQL_RECORDS, {}, $addr);
 }
-
-
-# sub get_dbh {
-#     # my @driver_names = DBI->available_drivers;
-#     # print @driver_names;
-#     # my %drivers      = DBI->installed_drivers;
-#     # print %drivers;
-#     # my @data_sources = DBI->data_sources($driver_name, {});
-#     # print @data_sources;
-
-#     # my @data_sources = DBI->data_sources('Pg');
-#     # my @data_sources = $dbh->data_sources();
-#     # print "@data_sources";
-
-#     my $dbh = DBI->connect('dbi:Pg:dbname=test', '', '', {});
-
-#     my $ary_ref = $dbh->selectall_arrayref("SELECT id FROM message LIMIT 1");
-
-#     print "ary_ref = @$ary_ref\n";
-
-#     my $rc  = $dbh->disconnect;
-# }
-
 
 return 1;
 
