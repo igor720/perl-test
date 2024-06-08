@@ -7,53 +7,46 @@ BEGIN {
 
 
 get '/' => sub ($c) {
-  $c->render(template => 'index');
+    $c->render(template => 'index');
 };
 
-# /foo?user=sri
+# /foo1?user=sri
 get '/foo1' => sub ($c) {
-  my $user = $c->param('user');
+    my $user = $c->param('user');
+    my @rows = (1,2,3,4,5);
 
-  $c->app->log->debug("Request from ******************");
+    $c->app->log->debug("Request from ******************");
 
-  $c->render(text => "Hello $user.");
+    $c->render(template => 'listing', rows => \@rows);
+
+#     say $c->render(<<'EOF', { rows => \@rows } );
+# % for (@$rows) {
+# <%= "Row $_\n" =%>
+# % }
+# EOF
+
+    # $c->render(text => "Hello $user.");
 };
 
-get '/foo2' => sub ($c) {
-  $c->stash(one => 23);
-  $c->render(template => 'magic', two => 24);
-};
-
-# Access request information
-get '/agent' => sub ($c) {
-  my $host = $c->req->url->to_abs->host;
-  my $ua   = $c->req->headers->user_agent;
-  $c->render(text => "Request by $ua reached $host.");
-};
-
-# Echo the request body and send custom header with response
-post '/echo' => sub ($c) {
-  $c->res->headers->header('X-Bender' => 'Bite my shiny metal ass!');
-  $c->render(data => $c->req->body);
-};
-
-# Not found (404)
-get '/missing' => sub ($c) {
-  $c->render(template => 'does_not_exist');
-};
-
-# Exception (500)
-get '/dies' => sub { die 'Intentional error' };
-
-get '/with_block' => 'block';
 
 app->start;
 __DATA__
+
+@@ listing.html.ep
+% layout 'default';
+% title 'DB Listing';
+<table>
+   <tr><th>Heading 1</th><th>Heading 2</th></tr>
+   % for my $n (@$rows) {
+   <tr><td>Cell <%= $n %></td><td><%= $n %></td></tr>
+   % }
+</table>
 
 @@ index.html.ep
 % layout 'default';
 % title 'Welcome';
 <h1>Welcome to the Mojolicious real-time web framework!</h1>
+
 
 @@ layouts/default.html.ep
 <!DOCTYPE html>
@@ -62,20 +55,5 @@ __DATA__
   <body><%= content %></body>
 </html>
 
-@@ magic.html.ep
-The magic numbers are <%= $one %> and <%= $two %>.
 
-@@ block.html.ep
-% my $link = begin
-  % my ($url, $name) = @_;
-  Try <%= link_to $url => begin %><%= $name %><% end %>.
-% end
-<!DOCTYPE html>
-<html>
-  <head><title>Sebastians frameworks</title></head>
-  <body>
-    %= $link->('http://mojolicious.org', 'Mojolicious')
-    %= $link->('http://mojojs.org', 'mojo.js')
-  </body>
-</html>
 

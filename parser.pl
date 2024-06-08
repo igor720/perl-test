@@ -13,9 +13,9 @@ my $dbh = DBI->connect(
     'dbi:Pg:dbname=test', '', '', {RaiseError => 1, AutoCommit => 0}
     );
 
-# отменяем AutoCommit, чтобы вставлять быстрее
 my $insertion_speed = 1000; # >0, 1 для автокоммита
 my $count = parse($dbh, $insertion_speed);
 
-print "count = $count";
+#print "count = $count";
 
+1;

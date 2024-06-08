@@ -31,13 +31,14 @@ sub parse {
     my $sth_mes = $dbh->prepare($SQL_MES);
     my $sth_log = $dbh->prepare($SQL_LOG);
 
-    # следующие строки только для отладки
-    my $sth_mes_trunc = $dbh->prepare("TRUNCATE message");
-    my $sth_log_trunc = $dbh->prepare("TRUNCATE log");
-    $sth_mes_trunc->execute() or die $DBI::errstr;
-    $sth_log_trunc->execute() or die $DBI::errstr;
-    $dbh->commit();
+    ## следующие строки только для отладки
+    # my $sth_mes_trunc = $dbh->prepare("TRUNCATE message");
+    # my $sth_log_trunc = $dbh->prepare("TRUNCATE log");
+    # $sth_mes_trunc->execute() or die $DBI::errstr;
+    # $sth_log_trunc->execute() or die $DBI::errstr;
+    # $dbh->commit();
 
+    ## имя файла лога берем из командной строки
     while (<>) {
         # s/^\w+//;  # эта строка вроде не нужна для такого лога
         s/\s+$//;
@@ -69,32 +70,31 @@ sub parse {
         }
         $count++;
         $dbh->commit() if ($count % ($insertion_speed>0?$insertion_speed:1))==0;
-        # last if $i>10;
     };
     $dbh->commit();
     return $count;
 }
 
-sub get_dbh {
-    # my @driver_names = DBI->available_drivers;
-    # print @driver_names;
-    # my %drivers      = DBI->installed_drivers;
-    # print %drivers;
-    # my @data_sources = DBI->data_sources($driver_name, {});
-    # print @data_sources;
+# sub get_dbh {
+#     # my @driver_names = DBI->available_drivers;
+#     # print @driver_names;
+#     # my %drivers      = DBI->installed_drivers;
+#     # print %drivers;
+#     # my @data_sources = DBI->data_sources($driver_name, {});
+#     # print @data_sources;
 
-    # my @data_sources = DBI->data_sources('Pg');
-    # my @data_sources = $dbh->data_sources();
-    # print "@data_sources";
+#     # my @data_sources = DBI->data_sources('Pg');
+#     # my @data_sources = $dbh->data_sources();
+#     # print "@data_sources";
 
-    my $dbh = DBI->connect('dbi:Pg:dbname=test', '', '', {});
+#     my $dbh = DBI->connect('dbi:Pg:dbname=test', '', '', {});
 
-    my $ary_ref = $dbh->selectall_arrayref("SELECT id FROM message LIMIT 1");
+#     my $ary_ref = $dbh->selectall_arrayref("SELECT id FROM message LIMIT 1");
 
-    print "ary_ref = @$ary_ref\n";
+#     print "ary_ref = @$ary_ref\n";
 
-    my $rc  = $dbh->disconnect;
-}
+#     my $rc  = $dbh->disconnect;
+# }
 
 
 return 1;
